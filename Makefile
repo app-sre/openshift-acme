@@ -2,12 +2,24 @@
 .PHONY: all
 all: build
 
+ifneq (,$(wildcard $(CURDIR)/.docker))
+	DOCKER_CONF := $(CURDIR)/.docker
+else
+	DOCKER_CONF := $(HOME)/.docker
+endif
+
+CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 
 GO_BUILD_PACKAGES :=./cmd/...
 GO_TEST_PACKAGES :=./cmd/... ./pkg/...
 
 IMAGE_REGISTRY :=quay.io
 
+# ubi8 builds don't support the != operator
+IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
+
+CONTROLLER_IMAGE_NAME := $(IMAGE_REGISTRY)/app-sre/openshift-acme-controller
+EXPOSER_IMAGE_NAME := $(IMAGE_REGISTRY)/app-sre/openshift-acme-exposer
 # Include the library makefile
 include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	golang.mk \
@@ -66,3 +78,13 @@ ci-test-e2e-specific-namespaces:
 	$(MAKE) --no-print-directory test-e2e E2E_CONTROLLER_NAMESPACE:=acme-controller E2E_FIXED_NAMESPACE:=acme-controller
 	$(MAKE) --no-print-directory test-e2e E2E_CONTROLLER_NAMESPACE:=acme-controller E2E_FIXED_NAMESPACE:=test
 .PHONY: ci-test-e2e-specific-namespaces
+
+build-images:
+	$(CONTAINER_ENGINE) build -t $(CONTROLLER_IMAGE_NAME):latest -f images/openshift-acme-controller/Dockerfile .
+	$(CONTAINER_ENGINE) tag $(CONTROLLER_IMAGE_NAME):latest $(CONTROLLER_IMAGE_NAME):$(IMAGE_TAG)
+	$(CONTAINER_ENGINE) build -t $(EXPOSER_IMAGE_NAME):latest -f images/openshift-acme-exposer/Dockerfile .
+	$(CONTAINER_ENGINE) tag $(EXPOSER_IMAGE_NAME):latest $(EXPOSER_IMAGE_NAME):$(IMAGE_TAG)
+
+push: build-images
+	$(CONTAINER_ENGINE) --config=$(DOCKER_CONF) push $(CONTROLLER_IMAGE_NAME):$(IMAGE_TAG)
+	$(CONTAINER_ENGINE) --config=$(DOCKER_CONF) push $(EXPOSER_IMAGE_NAME):$(IMAGE_TAG)
