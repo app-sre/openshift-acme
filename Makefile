@@ -15,14 +15,11 @@ GO_TEST_PACKAGES :=./cmd/... ./pkg/...
 
 IMAGE_REGISTRY :=quay.io
 
-QUAY_REPO := $(IMAGE_REGISTRY)/app-sre
-
 # ubi8 builds don't support the != operator
 IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
 
-CONTROLLER_IMAGE_NAME := $(QUAY_REPO)/openshift-acme-controller
-EXPOSER_IMAGE_NAME := $(QUAY_REPO)/openshift-acme-exposer
-
+CONTROLLER_IMAGE_NAME := $(IMAGE_REGISTRY)/app-sre/openshift-acme-controller
+EXPOSER_IMAGE_NAME := $(IMAGE_REGISTRY)/app-sre/openshift-acme-exposer
 # Include the library makefile
 include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	golang.mk \
