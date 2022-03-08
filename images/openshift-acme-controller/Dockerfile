@@ -1,4 +1,4 @@
-FROM openshift/origin-release:golang-1.13 as builder
+FROM quay.io/app-sre/openshift/origin-release:golang-1.13 as builder
 WORKDIR /go/src/github.com/tnozicka/openshift-acme
 COPY . .
 RUN make build --warn-undefined-variables
